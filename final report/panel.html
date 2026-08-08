@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PW Generator</title>
+<style>
+  /* fonts removed for CSP */
+
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1e2335;
+    --border: #2a2f45;
+    --accent: #6c63ff;
+    --accent2: #a78bfa;
+    --success: #22d3a0;
+    --warning: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --mono: 'Courier New', Courier, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    overflow: hidden;
+    position: relative;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* ── Dot (minimized state) ── */
+  #dot {
+    display: none;
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    box-shadow: 0 4px 20px rgba(108,99,255,0.5);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    z-index: 99999;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  #dot:hover {
+    transform: scale(1.12);
+    box-shadow: 0 6px 28px rgba(108,99,255,0.7);
+  }
+  #dot.visible { display: flex; }
+
+  /* ── Main panel ── */
+  #main {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: opacity 0.2s, transform 0.2s;
+    overflow: hidden;
+  }
+  #main.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.95);
+  }
+
+  /* ── Top bar ── */
+  #topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    gap: 8px;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  #topbar h1 {
+    font-size: 0.82rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    white-space: nowrap;
+  }
+
+  .tb-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: var(--sans);
+    padding: 0;
+  }
+  .tb-btn:hover { background: var(--border); }
+
+  /* ── Scrollable content ── */
+  #content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px 12px 32px;
+    width: 100%;
+  }
+  #content::-webkit-scrollbar { width: 5px; }
+  #content::-webkit-scrollbar-track { background: transparent; }
+  #content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 7px;
+  }
+
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108,99,255,0.15); }
+  input[type="number"] { font-family: var(--sans); }
+
+  .charset-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+
+  .charset-option input[type="radio"] { display: none; }
+  .charset-option label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 10px;
+    cursor: pointer;
+    color: var(--text);
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .charset-option label .example { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); font-weight: 400; }
+  .charset-option input:checked + label { border-color: var(--accent); background: rgba(108,99,255,0.1); color: var(--accent2); }
+  .charset-option label:hover { border-color: var(--accent2); }
+
+  .custom-area { display: none; margin-top: 10px; }
+  .custom-area.visible { display: block; }
+
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; width: 100%; }
+
+  .counter-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .counter-box .clabel { font-size: 0.75rem; color: var(--muted); flex-shrink: 0; }
+  .counter-box .count {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--success);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .counter-box .warn { color: var(--warning); }
+
+  button.btn-primary {
+    background: var(--accent);
+    color: #fff;
+    font-family: var(--sans);
+    font-weight: 600;
+    border: none;
+    border-radius: 9px;
+    padding: 11px;
+    font-size: 0.9rem;
+    width: 100%;
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: opacity 0.15s;
+  }
+  button.btn-primary:hover { opacity: 0.88; }
+  button.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-sm {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .btn-sm:hover { background: var(--border); }
+  .btn-sm:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .results-card { display: none; }
+  .results-card.visible { display: block; }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .results-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 55%;
+  }
+  .btn-group { display: flex; gap: 6px; }
+
+  .search-wrap { position: relative; margin-bottom: 10px; }
+  .search-wrap input { padding-left: 32px; font-size: 0.82rem; }
+  .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+
+  .list-wrap {
+    max-height: 240px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--bg);
+  }
+  .list-wrap::-webkit-scrollbar { width: 5px; }
+  .list-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .pw-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+  }
+  .pw-item:last-child { border-bottom: none; }
+  .pw-item:hover { background: var(--surface); }
+
+  .pw-text { font-family: var(--mono); font-size: 0.82rem; flex: 1; word-break: break-all; }
+  .pw-suffix { color: var(--accent2); }
+
+  .copy-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 3px 8px;
+    font-size: 0.68rem;
+    border-radius: 4px;
+    font-family: var(--sans);
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent2); }
+  .copy-btn.copied { border-color: var(--success); color: var(--success); }
+
+  .no-results { text-align: center; padding: 22px; color: var(--muted); font-size: 0.82rem; }
+
+  #paginationBar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+    overflow: hidden;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: var(--success);
+    color: #0a1f18;
+    font-weight: 600;
+    font-size: 0.78rem;
+    padding: 8px 16px;
+    border-radius: 20px;
+    transition: transform 0.25s ease;
+    z-index: 999;
+    pointer-events: none;
+    max-width: 90%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- Minimized dot -->
+<div id="dot" title="Open PW Generator">🔑</div>
+
+<!-- Main panel -->
+<div id="main">
+
+  <div id="topbar">
+    <h1>🔑 PW Candidate Generator</h1>
+    <div style="display:flex;gap:6px">
+      <button class="tb-btn" title="Minimize to dot">−</button>
+    </div>
+  </div>
+
+  <div id="content">
+
+    <!-- Prefix -->
+    <div class="card">
+      <label>Known Prefix</label>
+      <input type="text" id="prefix" placeholder="e.g. MyDog@20" spellcheck="false" autocomplete="off" />
+    </div>
+
+    <!-- Charset -->
+    <div class="card">
+      <label>Missing character type</label>
+      <div class="charset-grid">
+        <div class="charset-option">
+          <input type="radio" name="charset" id="cs1" value="0123456789" checked>
+          <label for="cs1">Numbers only <span class="example">0–9</span></label>
+        </div>
+        <div class="charset-option">
+          <input type="radio" name="charset" id="cs2" value="abcdefghijklmnopqrstuvwxyz">
+          <label for="cs2">Lowercase <span class="example">a–z</span></label>
+        </div>
+        <div class="charset-option">
+          <input type="radio" name="charset" id="cs3" value="ABCDEFGHIJKLMNOPQRSTUVWXYZ">
+          <label for="cs3">Uppercase <span class="example">A–Z</span></label>
+        </div>
+        <div class="charset-option">
+          <input type="radio" name="charset" id="cs4" value="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ">
+          <label for="cs4">Letters only <span class="example">a–z A–Z</span></label>
+        </div>
+        <div class="charset-option">
+          <input type="radio" name="charset" id="cs5" value="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ">
+          <label for="cs5">Numbers+Letters <span class="example">0–9 a–z A–Z</span></label>
+        </div>
+        <div class="charset-option">
+          <input type="radio" name="charset" id="cs6" value="custom">
+          <label for="cs6">Custom set <span class="example">define below</span></label>
+        </div>
+      </div>
+      <div class="custom-area" id="customArea">
+        <label style="margin-top:10px">Custom characters</label>
+        <input type="text" id="customChars" placeholder="e.g. !@#$0189" spellcheck="false" autocomplete="off" />
+      </div>
+    </div>
+
+    <!-- Length + suffix -->
+    <div class="row-2">
+      <div class="card" style="margin-bottom:0">
+        <label>Missing chars</label>
+        <input type="number" id="missingLen" value="2" min="1" />
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <label>Known suffix</label>
+        <input type="text" id="suffix" placeholder="e.g. !" spellcheck="false" autocomplete="off" />
+      </div>
+    </div>
+    <div style="margin-bottom:14px"></div>
+
+    <!-- Target fill settings -->
+    <div class="card">
+      <label>Target page input selector</label>
+      <input type="text" id="targetSelector" placeholder="e.g. #password, input[name=password]" spellcheck="false" autocomplete="off" />
+      <label style="margin-top:10px">Submit selector (optional)</label>
+      <input type="text" id="submitSelector" placeholder="e.g. button[type=submit]" spellcheck="false" autocomplete="off" />
+      <label style="margin-top:10px">Auto-fill delay (ms)</label>
+      <input type="number" id="autoDelay" value="600" min="100" max="2000" style="width:100%;" />
+      <div class="row-2" style="margin-top:12px">
+        <button class="btn-sm" id="fillNextBtn">Fill next</button>
+        <button class="btn-sm" id="startAutoBtn">Start auto-fill</button>
+        <button class="btn-sm" id="stopAutoBtn" disabled>Stop</button>
+      </div>
+      <div class="counter-box" style="margin-top:12px">
+        <span class="clabel">Last attempted</span>
+        <span class="count" id="lastUsedDisplay">—</span>
+      </div>
+      <div class="counter-box" style="margin-top:8px">
+        <span class="clabel">Auto-fill status</span>
+        <span class="count" id="autoStatusDisplay">Stopped</span>
+      </div>
+      <div class="counter-box" style="margin-top:8px">
+        <span class="clabel">Successful candidate</span>
+        <span class="count" id="lastSuccessDisplay">—</span>
+      </div>
+    </div>
+
+    <!-- Counter -->
+    <div class="counter-box">
+      <span class="clabel">Total combinations</span>
+      <span class="count" id="countDisplay">—</span>
+    </div>
+
+    <button class="btn-primary" id="generateBtn">Generate Candidates</button>
+
+    <!-- Results -->
+    <div class="results-card" id="resultsCard">
+      <div class="results-header">
+        <span class="results-title" id="resultsTitle">Candidates</span>
+        <div class="btn-group">
+          <button class="btn-sm" id="copyPageBtn">Copy Page</button>
+          <button class="btn-sm" id="exportBtn">Export TXT</button>
+        </div>
+      </div>
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="searchBox" placeholder="Filter…" />
+      </div>
+      <div class="list-wrap" id="listWrap"></div>
+      <div id="paginationBar"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="panel.js"></script>
+</body>
+</html>

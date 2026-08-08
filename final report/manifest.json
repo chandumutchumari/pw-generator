@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Password Candidate Generator",
+  "version": "1.0",
+  "description": "Generate password candidates for personal memory recovery. All local, no network.",
+  "permissions": ["sidePanel", "scripting", "activeTab"],
+  "host_permissions": ["<all_urls>"],
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "action": {
+    "default_title": "Open PW Generator",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
